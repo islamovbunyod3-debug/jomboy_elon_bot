@@ -4,9 +4,8 @@ from aiogram.utils import executor
 import sqlite3
 
 # 1. BOT SOZLAMALARI
-API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY
-'  # Botingizning tokeni
-ADMIN_ID = 6985111317  # O'zingizning shaxsiy Telegram ID raqamingiz muvaffaqiyatli kiritildi
+API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'  # Botingizning faol tokeni
+ADMIN_ID = 6985111317  # Sizning shaxsiy Telegram ID raqamingiz
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
