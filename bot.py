@@ -67,8 +67,7 @@ async def start_cmd(message: types.Message):
                        (user_id, message.from_user.username, message.from_user.full_name))
         conn.commit()
         
-    await message.reply(f"👋 **Assalomu alaykum, {message.from_user.full_name}!**\n'Jomboy Elonlari' guruhining rasmiy aksiyalar botiga xush kelibsiz.\n\n"
-                        f"Odam qo'shib pul ishlashni boshlash uchun quyidagi menyu tugmalaridan foydalaning.", 
+    await message.reply("👋 **Assalomu alaykum!**\n'Jomboy Elonlari' guruhining rasmiy aksiyalar botiga xush kelibsiz.\n\nOdam qo'shib pul ishlashni boshlash uchun quyidagi menyu tugmalaridan foydalaning.", 
                         reply_markup=get_main_menu(user_id), parse_mode='Markdown')
 
 # 5. MENING PROFILIM FUNKSIYASI
@@ -104,17 +103,17 @@ async def choose_payment(message: types.Message):
 
 @dp.callback_query_handler(Text(startswith="pay_"))
 async def payment_callback(call: types.CallbackQuery):
-    action = call.data.split("_")
-    if action[1] == "card":
+    action = call.data.split("_")[1]
+    if action == "card":
         cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
-        await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Masalan: 8600123412341234):")
-    elif action[1] == "phone":
+        await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Faqat raqamlar bilan):")
+    elif action == "phone":
         cursor.execute("UPDATE users SET payment_type = 'Telefon (Paynet)' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga pul tushadigan telefon raqamingizni yuboring (Masalan: +998991234567):")
     conn.commit()
     await call.answer()
 
-# FOYDALANUVCHIDAN KARTA YOKI TELEFON RAQAM MATNINI QABUL QILISH
+# KARTA YOKI TELEFON RAQAM MATNINI QABUL QILISH
 @dp.message_handler(chat_type=types.ChatType.PRIVATE)
 async def save_wallet(message: types.Message):
     user_id = message.from_user.id
@@ -215,3 +214,6 @@ async def group_profile(message: types.Message):
 # 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
 @dp.message_handler(Text(equals="Admin paneli"))
 async def admin_panel(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+        
