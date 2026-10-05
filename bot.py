@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# 2. MA'LUMOTLAR BAZASI (Yangi ustunlar qo'shildi)
+# 2. MA'LUMOTLAR BAZASI
 conn = sqlite3.connect('jomboy_elonlari.db')
 cursor = conn.cursor()
 cursor.execute('''
@@ -61,7 +61,6 @@ def get_payment_menu():
 @dp.message_handler(commands=['start'], chat_type=types.ChatType.PRIVATE)
 async def start_cmd(message: types.Message):
     user_id = message.from_user.id
-    # Foydalanuvchini bazada tekshirish va yaratish
     cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
     if not cursor.fetchone():
         cursor.execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
@@ -84,7 +83,6 @@ async def show_profile(message: types.Message):
     else:
         invited, left, pay_type, wallet = 0, 0, 'Tanlanmagan', 'Kiritilmagan'
         
-    # Sof hisoblangan pul (faqat guruhda qolgan har 50 ta odam uchun 10 000 so'm)
     current_active = invited
     earned_money = (current_active // 50) * 10000
     
@@ -122,6 +120,10 @@ async def save_wallet(message: types.Message):
     user_id = message.from_user.id
     text = message.text.strip().replace(" ", "").replace("-", "")
     
+    # Agar menyu tugmalari bosilgan bo'lsa, ularni raqam deb o'ylamasligi uchun o'tkazib yuboramiz
+    if message.text in ["📊 Mening profilim", "💳 To'lov turini sozlash", "📜 Aksiya qoidalari", "👑 Admin paneli"]:
+        return
+
     cursor.execute("SELECT payment_type FROM users WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
     pay_type = row[0] if row else "Tanlanmagan"
@@ -135,12 +137,12 @@ async def save_wallet(message: types.Message):
             await message.reply("❌ Xato karta raqami! Iltimos, 16 xonali raqam yuboring.")
             
     elif pay_type == "Telefon (Paynet)":
-        if text.startswith("+") and text[1:].isdigit() and len(text) == 13:
+        if (text.startswith("+") and text[1:].isdigit() and len(text) == 13) or (text.isdigit() and len(text) == 9):
             cursor.execute("UPDATE users SET wallet_info = ? WHERE user_id = ?", (text, user_id))
             conn.commit()
             await message.reply(f"✅ Telefon raqamingiz Paynet uchun saqlandi: `{text}`")
         else:
-            await message.reply("❌ Xato telefon raqami! Iltimos, xalqaro formatda yuboring: `+998991234567`")
+            await message.reply("❌ Xato telefon raqami! Iltimos, formatni tekshiring: `+998991234567`")
     else:
         await message.reply("⚙️ Iltimos, birinchi navbatda 'To'lov turini sozlash' tugmasini bosing.")
 
@@ -197,7 +199,7 @@ async def left_member_handler(message: types.Message):
     except:
         pass
 
-# 9. GURUH ICHIDA /mening_profilim BUYRUG'INI HAM QO'LLAB-QUVVATLASH
+# 9. GURUH ICHIDA BUYRUQNI QO'LLAB-QUVVATLASH
 @dp.message_handler(commands=['mening_profilim'], chat_type=[types.ChatType.GROUP, types.ChatType.SUPERGROUP])
 async def group_profile(message: types.Message):
     user_id = message.from_user.id
@@ -211,5 +213,3 @@ async def group_profile(message: types.Message):
                         f"❌ Chiqib ketganlar: **{left}** ta\n"
                         f"💰 Pul olish uchun bot lichkasiga o'tib hamyoningizni sozlang: @jomboy_elon_bot", parse_mode='HTML')
 
-# 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
-@dp.message_handler(Text(equals="👑 Admin paneli"))
