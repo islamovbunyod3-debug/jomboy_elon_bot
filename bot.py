@@ -1,10 +1,13 @@
 import logging
+import os
 import sqlite3
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 from aiogram.dispatcher.filters import Text
+from aiohttp import web
+import asyncio
 
-# 1. BOT SOZLAMALARI (HECH QANDAY SOZLAMASIZ TO'G'RIDAN-TO'G'RI ISHLAYDI)
+# 1. BOT SOZLAMALARI (TOKEN TO'G'RIDAN-TO'G'RI KOD ICHIDA)
 API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'
 ADMIN_ID = 6985111317  
 
@@ -102,7 +105,7 @@ async def payment_callback(call: types.CallbackQuery):
     conn.commit()
     await call.answer()
 
-# HITYOT RAQAMLARINI SAQLASH
+# HAMYON MA'LUMOTLARINI SAQLASH
 @dp.message_handler(chat_type=types.ChatType.PRIVATE)
 async def save_wallet(message: types.Message):
     user_id = message.from_user.id
@@ -138,12 +141,12 @@ async def show_rules(message: types.Message):
     rules = ("🔥 **'Jomboy Elonlari' guruhini rivojlantirish aksiyasi!**\n\n"
              "1️⃣ Guruhimizga odam qo'shing.\n"
              "2️⃣ Bot ichida **'Mening profilim'** tugmasini bosib hisobingizni kuzating.\n"
-             "3️⃣ Guruhda qolgan har **50 ta faol odam** uchun **10 000 so'm** beriladi.\n"
+             "3️⃣ Guruhda qolgan har **50 ta faol odam** uchun **10 000 so'm** pul beriladi.\n"
              "4️⃣ Odamlar guruhdan chiqsa, balansingizdan avtomat kamayadi.\n"
              "5️⃣ Pullar har kuni kechqurun admin tomonidan o'tkazib beriladi.")
     await message.reply(rules, parse_mode='Markdown')
 
-# 8. GURUHDA ODAM HISOBLASH
+# 8. GURUHDA ODAM HISOBLASH VA TIZIM XABARLARINI O'CHIRISH
 @dp.message_handler(content_types=types.ContentTypes.NEW_CHAT_MEMBERS)
 async def new_member_handler(message: types.Message):
     inviter = message.from_user
@@ -179,7 +182,17 @@ async def left_member_handler(message: types.Message):
     except:
         pass
 
-# 9. ADMIN PANELI (HISOBOT BUYRUG'I)
+# 9. GURUH ICHIDA BUYRUQNI QO'LLAB-QUVVATLASH
+@dp.message_handler(commands=['mening_profilim'], chat_type=[types.ChatType.GROUP, types.ChatType.SUPERGROUP])
+async def group_profile(message: types.Message):
+    user_id = message.from_user.id
+    cursor.execute("SELECT invited_count, left_count FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    invited = row[0] if row else 0
+    left = row[1] if row else 0
+    await message.reply(f"👤 {message.from_user.get_mention(as_html=True)}\n✅ Guruhda qolgan faol referallaringiz: **{invited}** ta\n❌ Chiqib ketganlar: **{left}** ta\n💰 Pul olish uchun bot lichkasiga o'tib hamyoningizni sozlang: @jomboy_elon_bot", parse_mode='HTML')
+
+# 10. ADMIN PANELI
 @dp.message_handler(Text(equals="Admin paneli"))
 async def admin_panel_text(message: types.Message):
     if message.from_user.id != ADMIN_ID:
@@ -194,8 +207,4 @@ async def admin_panel_text(message: types.Message):
             cursor.execute("UPDATE users SET invited_count = invited_count - 50 WHERE user_id = ?", (user_id,))
         conn.commit()
     else:
-        report_text = "📅 **Hozircha bazada 50 tadan ko'p odam qo'shgan g'oliblar mavjud emas.**"
-    await message.reply(report_text, parse_mode='Markdown')
-
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+        report_text = "📅 **Hozircha bazada 50 tadan ko'p odam qo'shgan g'oliblar vaqtinchalik mavjud emas.**"
