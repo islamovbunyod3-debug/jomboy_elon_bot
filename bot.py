@@ -7,7 +7,7 @@ from aiogram.dispatcher.filters import Text
 from aiohttp import web
 import asyncio
 
-# 1. BOT SOZLAMALARI (XAVFSIZLIK TIZIMI O'RNATILDI)
+# 1. BOT SOZLAMALARI (TOKEN RENDER SOZLAMALARIDAN AVTOMAT O'QILADI)
 API_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 6985111317  
 
