@@ -40,20 +40,20 @@ conn.commit()
 # 3. KLAVIATURA TUGMALARI (MENYU)
 def get_main_menu(user_id):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_profile = types.KeyboardButton("📊 Mening profilim")
-    btn_payment = types.KeyboardButton("💳 To'lov turini sozlash")
-    btn_rules = types.KeyboardButton("📜 Aksiya qoidalari")
+    btn_profile = types.KeyboardButton("Mening profilim")
+    btn_payment = types.KeyboardButton("To'lov turini sozlash")
+    btn_rules = types.KeyboardButton("Aksiya qoidalari")
     keyboard.add(btn_profile, btn_payment)
     keyboard.add(btn_rules)
     if user_id == ADMIN_ID:
-        btn_admin = types.KeyboardButton("👑 Admin paneli")
+        btn_admin = types.KeyboardButton("Admin paneli")
         keyboard.add(btn_admin)
     return keyboard
 
 def get_payment_menu():
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    btn_card = types.InlineKeyboardButton("💳 Plastik karta", callback_data="pay_card")
-    btn_phone = types.InlineKeyboardButton("📱 Telefon (Paynet)", callback_data="pay_phone")
+    btn_card = types.InlineKeyboardButton("Plastik karta", callback_data="pay_card")
+    btn_phone = types.InlineKeyboardButton("Telefon (Paynet)", callback_data="pay_phone")
     keyboard.add(btn_card, btn_phone)
     return keyboard
 
@@ -72,7 +72,7 @@ async def start_cmd(message: types.Message):
                         reply_markup=get_main_menu(user_id), parse_mode='Markdown')
 
 # 5. MENING PROFILIM FUNKSIYASI
-@dp.message_handler(Text(equals="📊 Mening profilim"))
+@dp.message_handler(Text(equals="Mening profilim"))
 async def show_profile(message: types.Message):
     user_id = message.from_user.id
     cursor.execute("SELECT invited_count, left_count, payment_type, wallet_info FROM users WHERE user_id = ?", (user_id,))
@@ -98,7 +98,7 @@ async def show_profile(message: types.Message):
     await message.reply(text, parse_mode='HTML', reply_markup=get_main_menu(user_id))
 
 # 6. TO'LOV TURINI SOZLASH (KARTA YOKI PAYNET)
-@dp.message_handler(Text(equals="💳 To'lov turini sozlash"))
+@dp.message_handler(Text(equals="To'lov turini sozlash"))
 async def choose_payment(message: types.Message):
     await message.reply("Pul mukofotini qaysi uslubda qabul qilmoqchisiz? Tanlang 👇", reply_markup=get_payment_menu())
 
@@ -107,10 +107,10 @@ async def payment_callback(call: types.CallbackQuery):
     action = call.data.split("_")[1]
     if action == "card":
         cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
-        await call.message.answer("💳 Menga 16 xonali plastik karta raqamingizni yuboring (Masalan: `8600123412341234`):")
+        await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Masalan: 8600123412341234):")
     elif action == "phone":
         cursor.execute("UPDATE users SET payment_type = 'Telefon (Paynet)' WHERE user_id = ?", (call.from_user.id,))
-        await call.message.answer("📱 Menga pul tushadigan telefon raqamingizni yuboring (Masalan: `+998991234567`):")
+        await call.message.answer("Menga pul tushadigan telefon raqamingizni yuboring (Masalan: +998991234567):")
     conn.commit()
     await call.answer()
 
@@ -120,7 +120,7 @@ async def save_wallet(message: types.Message):
     user_id = message.from_user.id
     text = message.text.strip().replace(" ", "").replace("-", "")
     
-    if message.text in ["📊 Mening profilim", "💳 To'lov turini sozlash", "📜 Aksiya qoidalari", "👑 Admin paneli"]:
+    if message.text in ["Mening profilim", "To'lov turini sozlash", "Aksiya qoidalari", "Admin paneli"]:
         return
 
     cursor.execute("SELECT payment_type FROM users WHERE user_id = ?", (user_id,))
@@ -146,7 +146,7 @@ async def save_wallet(message: types.Message):
         await message.reply("⚙️ Iltimos, birinchi navbatda 'To'lov turini sozlash' tugmasini bosing.")
 
 # 7. AKSIYA QOIDALARI TUGMASI
-@dp.message_handler(Text(equals="📜 Aksiya qoidalari"))
+@dp.message_handler(Text(equals="Aksiya qoidalari"))
 async def show_rules(message: types.Message):
     rules = ("🔥 **'Jomboy Elonlari' guruhini rivojlantirish aksiyasi!**\n\n"
              "1️⃣ Guruhimizga odam (kontakt) qo'shing.\n"
@@ -213,4 +213,6 @@ async def group_profile(message: types.Message):
                         f"💰 Pul olish uchun bot lichkasiga o'tib hamyoningizni sozlang: @jomboy_elon_bot", parse_mode='HTML')
 
 # 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
-@dp.message_handler(Text(equals="👑 Admin paneli"))
+@dp.message_handler(Text(equals="Admin paneli"))
+async def admin_panel(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
