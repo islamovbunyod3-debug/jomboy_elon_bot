@@ -103,11 +103,11 @@ async def choose_payment(message: types.Message):
 
 @dp.callback_query_handler(Text(startswith="pay_"))
 async def payment_callback(call: types.CallbackQuery):
-    action = call.data.split("_")
-    if action[1] == "card":
+    action = call.data.split("_")[1]
+    if action == "card":
         cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Faqat raqamlar bilan):")
-    elif action[1] == "phone":
+    elif action == "phone":
         cursor.execute("UPDATE users SET payment_type = 'Telefon (Paynet)' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga pul tushadigan telefon raqamingizni yuboring (Masalan: +998991234567):")
     conn.commit()
@@ -188,7 +188,7 @@ async def left_member_handler(message: types.Message):
     row = cursor.fetchone()
     
     if row:
-        inviter_id = row
+        inviter_id = row[0]
         cursor.execute("UPDATE users SET invited_count = invited_count - 1, left_count = left_count + 1 WHERE user_id = ? AND invited_count > 0", (inviter_id,))
         cursor.execute("DELETE FROM invites WHERE invited_id = ?", (left_user_id,))
         conn.commit()
