@@ -1,11 +1,11 @@
 import logging
 import os
 import sqlite3
-import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
+from aiogram.dispatcher.filters import Text
 from aiohttp import web
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
 
 # 1. BOT SOZLAMALARI
 API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'  
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# 2. MA'LUMOTLAR BAZASI (Karta va taklif qilinganlarni bog'lash tizimi)
+# 2. MA'LUMOTLAR BAZASI (Yangi ustunlar qo'shildi)
 conn = sqlite3.connect('jomboy_elonlari.db')
 cursor = conn.cursor()
 cursor.execute('''
@@ -24,7 +24,9 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT,
     full_name TEXT,
     invited_count INTEGER DEFAULT 0,
-    card_number TEXT DEFAULT 'Kiritilmagan'
+    left_count INTEGER DEFAULT 0,
+    payment_type TEXT DEFAULT 'Tanlanmagan',
+    wallet_info TEXT DEFAULT 'Kiritilmagan'
 )
 ''')
 cursor.execute('''
@@ -35,42 +37,125 @@ CREATE TABLE IF NOT EXISTS invites (
 ''')
 conn.commit()
 
-# 3. START BUYRUG'I VA KARTA QABUL QILISH
+# 3. KLAVIATURA TUGMALARI (MENYU)
+def get_main_menu(user_id):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn_profile = types.KeyboardButton("📊 Mening profilim")
+    btn_payment = types.KeyboardButton("💳 To'lov turini sozlash")
+    btn_rules = types.KeyboardButton("📜 Aksiya qoidalari")
+    keyboard.add(btn_profile, btn_payment)
+    keyboard.add(btn_rules)
+    if user_id == ADMIN_ID:
+        btn_admin = types.KeyboardButton("👑 Admin paneli")
+        keyboard.add(btn_admin)
+    return keyboard
+
+def get_payment_menu():
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    btn_card = types.InlineKeyboardButton("💳 Plastik karta", callback_data="pay_card")
+    btn_phone = types.InlineKeyboardButton("📱 Telefon (Paynet)", callback_data="pay_phone")
+    keyboard.add(btn_card, btn_phone)
+    return keyboard
+
+# 4. LICHKADA START BUYRUG'I
 @dp.message_handler(commands=['start'], chat_type=types.ChatType.PRIVATE)
 async def start_cmd(message: types.Message):
-    await message.reply("👋 Assalomu alaykum! 'Jomboy Elonlari' guruhining rasmiy botiga xush kelibsiz.\n\n"
-                        "💳 Aksiyada qatnashish va pulni qabul qilish uchun, iltimos, menga **plastik karta raqamingizni** yuboring (Masalan: `8600123412341234`).")
-
-@dp.message_handler(chat_type=types.ChatType.PRIVATE)
-async def get_card_number(message: types.Message):
-    text = message.text.replace(" ", "").replace("-", "")
-    
-    # Karta raqami formatini tekshirish (uzunligi 16 ta raqam bo'lsa)
-    if text.isdigit() and len(text) == 16:
-        cursor.execute("UPDATE users SET card_number = ? WHERE user_id = ?", (text, message.from_user.id))
-        conn.commit()
-        await message.reply(f"✅ Karta raqamingiz muvaffaqiyatli saqlandi: `{text}`\n\n"
-                            f"📊 Endi guruhga odam qo'shishni boshlashingiz mumkin. Har kuni soat 22:00 da 50 tadan oshgan faol a'zolaringiz uchun pul o'tkazib beriladi.")
-    else:
-        await message.reply("❌ Xato karta raqami! Iltimos, 16 xonali plastik karta raqamingizni faqat raqamlar bilan yuboring.")
-
-# 4. GURUH ICHIDA STATISTIKANI TEKSHIRISH
-@dp.message_handler(commands=['mening_profilim'])
-async def check_stats(message: types.Message):
     user_id = message.from_user.id
-    cursor.execute("SELECT invited_count, card_number FROM users WHERE user_id = ?", (user_id,))
+    # Foydalanuvchini bazada tekshirish va yaratish
+    cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
+                       (user_id, message.from_user.username, message.from_user.full_name))
+        conn.commit()
+        
+    await message.reply(f"👋 **Assalomu alaykum, {message.from_user.full_name}!**\n'Jomboy Elonlari' guruhining rasmiy aksiyalar botiga xush kelibsiz.\n\n"
+                        f"Odam qo'shib pul ishlashni boshlash uchun quyidagi menyu tugmalaridan foydalaning.", 
+                        reply_markup=get_main_menu(user_id), parse_mode='Markdown')
+
+# 5. MENING PROFILIM FUNKSIYASI
+@dp.message_handler(Text(equals="📊 Mening profilim"))
+async def show_profile(message: types.Message):
+    user_id = message.from_user.id
+    cursor.execute("SELECT invited_count, left_count, payment_type, wallet_info FROM users WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
     
-    count = row[0] if row else 0
-    card = row[1] if row else "Kiritilmagan"
+    if row:
+        invited, left, pay_type, wallet = row
+    else:
+        invited, left, pay_type, wallet = 0, 0, 'Tanlanmagan', 'Kiritilmagan'
+        
+    # Sof hisoblangan pul (faqat guruhda qolgan har 50 ta odam uchun 10 000 so'm)
+    current_active = invited
+    earned_money = (current_active // 50) * 10000
     
     text = (f"👤 **Foydalanuvchi:** {message.from_user.get_mention(as_html=True)}\n"
-            f"📊 **Hozirda guruhdagi faol odamlaringiz soni:** {count} ta\n"
-            f"💳 **Siz ro'yxatdan o'tkazgan karta:** `{card}`\n\n"
-            f"🎁 *Eslatma:* Agar kartangiz kiritilmagan bo'lsa, botning lichkasiga o'tib karta raqamingizni yozib qo'ying!")
-    await message.reply(text, parse_mode='HTML')
+            f"🆔 **Sizning ID:** `{user_id}`\n\n"
+            f"➕ **Jami qo'shgan odamlaringiz:** {invited + left} ta\n"
+            f"➖ **Guruhdan chiqib ketganlar:** {left} ta\n"
+            f"✅ **Hozirgi faol referallaringiz:** {current_active} ta\n\n"
+            f"💰 **Siz ishlagan sof pul:** {earned_money:,} so'm\n"
+            f"⚙️ **To'lov uslubi:** {pay_type}\n"
+            f"📥 **Hamyon/Raqam:** `{wallet}`\n\n"
+            f"📌 *Eslatma:* Agar to'lov hamyoni kiritilmagan bo'lsa, 'To'lov turini sozlash' tugmasini bosing!")
+    await message.reply(text, parse_mode='HTML', reply_markup=get_main_menu(user_id))
 
-# 5. GURUHGA ODAM QO'SHILGANDA HISOBLASH (Avtomat tizim)
+# 6. TO'LOV TURINI SOZLASH (KARTA YOKI PAYNET)
+@dp.message_handler(Text(equals="💳 To'lov turini sozlash"))
+async def choose_payment(message: types.Message):
+    await message.reply("Pul mukofotini qaysi uslubda qabul qilmoqchisiz? Tanlang 👇", reply_markup=get_payment_menu())
+
+@dp.callback_query_handler(Text(startswith="pay_"))
+async def payment_callback(call: types.CallbackQuery):
+    action = call.data.split("_")[1]
+    if action == "card":
+        cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
+        await call.message.answer("💳 Menga 16 xonali plastik karta raqamingizni yuboring (Masalan: `8600123412341234`):")
+    elif action == "phone":
+        cursor.execute("UPDATE users SET payment_type = 'Telefon (Paynet)' WHERE user_id = ?", (call.from_user.id,))
+        await call.message.answer("📱 Menga pul tushadigan telefon raqamingizni yuboring (Masalan: `+998991234567`):")
+    conn.commit()
+    await call.answer()
+
+# FOYDALANUVCHIDAN KARTA YOKI TELEFON RAQAM MATNINI QABUL QILISH
+@dp.message_handler(chat_type=types.ChatType.PRIVATE)
+async def save_wallet(message: types.Message):
+    user_id = message.from_user.id
+    text = message.text.strip().replace(" ", "").replace("-", "")
+    
+    cursor.execute("SELECT payment_type FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    pay_type = row[0] if row else "Tanlanmagan"
+    
+    if pay_type == "Plastik karta":
+        if text.isdigit() and len(text) == 16:
+            cursor.execute("UPDATE users SET wallet_info = ? WHERE user_id = ?", (text, user_id))
+            conn.commit()
+            await message.reply(f"✅ Karta raqamingiz muvaffaqiyatli saqlandi: `{text}`")
+        else:
+            await message.reply("❌ Xato karta raqami! Iltimos, 16 xonali raqam yuboring.")
+            
+    elif pay_type == "Telefon (Paynet)":
+        if text.startswith("+") and text[1:].isdigit() and len(text) == 13:
+            cursor.execute("UPDATE users SET wallet_info = ? WHERE user_id = ?", (text, user_id))
+            conn.commit()
+            await message.reply(f"✅ Telefon raqamingiz Paynet uchun saqlandi: `{text}`")
+        else:
+            await message.reply("❌ Xato telefon raqami! Iltimos, xalqaro formatda yuboring: `+998991234567`")
+    else:
+        await message.reply("⚙️ Iltimos, birinchi navbatda 'To'lov turini sozlash' tugmasini bosing.")
+
+# 7. AKSIYA QOIDALARI TUGMASI
+@dp.message_handler(Text(equals="📜 Aksiya qoidalari"))
+async def show_rules(message: types.Message):
+    rules = ("🔥 **'Jomboy Elonlari' guruhi aksiyasi qoidalari!**\n\n"
+             "1️⃣ Guruhimizga odam (kontakt) qo'shing.\n"
+             "2️⃣ Guruh ichida yoki ushbu botda **'Mening profilim'** tugmasini bosib balansingizni kuzatib boring.\n"
+             "3️⃣ Har **50 ta faol odam** uchun **10 000 so'm** pul beriladi.\n"
+             "4️⃣ Agar qo'shgan odamlaringiz guruhdan chiqib ketsa, balansingizdan avtomat kamayadi (aldovlar o'tmaydi).\n"
+             "5️⃣ Pullar har kuni kechqurun admin tomonidan kartangizga yoki telefon raqamingizga o'tkazib beriladi.")
+    await message.reply(rules, parse_mode='Markdown')
+
+# 8. KOP ODAM QOSHGANLARNI HISOBLASH (GURUHDA)
 @dp.message_handler(content_types=types.ContentTypes.NEW_CHAT_MEMBERS)
 async def new_member_handler(message: types.Message):
     inviter = message.from_user
@@ -78,98 +163,53 @@ async def new_member_handler(message: types.Message):
     
     if inviter.id not in [member.id for member in new_members]:
         added_count = len(new_members)
-        
-        # Taklif qiluvchi foydalanuvchini tekshiramiz yoki yaratamiz
         cursor.execute("SELECT invited_count FROM users WHERE user_id = ?", (inviter.id,))
-        row = cursor.fetchone()
-        if not row:
-            cursor.execute("INSERT INTO users (user_id, username, full_name, invited_count) VALUES (?, ?, ?, ?)",
-                           (inviter.id, inviter.username, inviter.full_name, 0))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
+                           (inviter.id, inviter.username, inviter.full_name))
         
-        # Har bir yangi qo'shilgan odamni taklif qiluvchi ID bilan bog'lab bazaga yozamiz
         for member in new_members:
             try:
                 cursor.execute("INSERT INTO invites (invited_id, inviter_id) VALUES (?, ?)", (member.id, inviter.id))
                 cursor.execute("UPDATE users SET invited_count = invited_count + 1 WHERE user_id = ?", (inviter.id,))
             except sqlite3.IntegrityError:
-                pass  # Agar bu odam oldin ham qo'shilgan bo'lsa hisoblamaydi
+                pass  
         conn.commit()
-    
     try:
         await message.delete()
     except:
         pass
 
-# 6. ODAM GURUHIDAN CHIQIB KETGANDA BALANSDAN AYIRISH (Minus qilish tizimi)
+# ODAM CHIQIB KETGANDA HISOBLASH (MINUS QILISH)
 @dp.message_handler(content_types=types.ContentTypes.LEFT_CHAT_MEMBER)
 async def left_member_handler(message: types.Message):
     left_user_id = message.left_chat_member.id
-    
-    # Chiqib ketgan odamni kim guruhga qo'shganini qidiramiz
     cursor.execute("SELECT inviter_id FROM invites WHERE invited_id = ?", (left_user_id,))
     row = cursor.fetchone()
     
     if row:
         inviter_id = row[0]
-        # O'sha taklif qiluvchining balansidan -1 ta odam ayiramiz
-        cursor.execute("UPDATE users SET invited_count = invited_count - 1 WHERE user_id = ? AND invited_count > 0", (inviter_id,))
+        cursor.execute("UPDATE users SET invited_count = invited_count - 1, left_count = left_count + 1 WHERE user_id = ? AND invited_count > 0", (inviter_id,))
         cursor.execute("DELETE FROM invites WHERE invited_id = ?", (left_user_id,))
         conn.commit()
-        
     try:
         await message.delete()
     except:
         pass
 
-# 7. HAR KUNI SOAT 22:00 DA ADMIN GA HISOBOT YUBORISH FUNKSIYASI
-async def send_daily_report():
-    # Faol odamlari soni 50 ta va undan ko'p bo'lganlarni bazadan qidiramiz
-    cursor.execute("SELECT user_id, full_name, username, invited_count, card_number FROM users WHERE invited_count >= 50")
-    winners = cursor.fetchall()
+# 9. GURUH ICHIDA /mening_profilim BUYRUG'INI HAM QO'LLAB-QUVVATLASH
+@dp.message_handler(commands=['mening_profilim'], chat_type=[types.ChatType.GROUP, types.ChatType.SUPERGROUP])
+async def group_profile(message: types.Message):
+    user_id = message.from_user.id
+    cursor.execute("SELECT invited_count, left_count FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    invited = row[0] if row else 0
+    left = row[1] if row else 0
     
-    if winners:
-        report_text = "💰 **BUGUNGI AKSIYA G'OLIBLARI RO'YXATI (Soat 22:00 holatiga):**\n\n"
-        for user_id, name, username, count, card in winners:
-            user_mention = f"[{name}](tg://user?id={user_id})"
-            user_user = f" (@{username})" if username else ""
-            report_text += f"👤 **G'olib:** {user_mention}{user_user}\n📊 **Haqiqiy odamlari:** {count} ta\n💳 **Karta raqami:** `{card}`\n\n"
-            
-            # To'lov qilingandan keyin ertasi kuni yana yangidan hisoblashi uchun ularning balansini nollab qo'yamiz (ixtiyoriy)
-            cursor.execute("UPDATE users SET invited_count = invited_count - 50 WHERE user_id = ?", (user_id,))
-        conn.commit()
-        report_text += "📌 *Eslatma: Ro'yxatdagi g'oliblarga pul o'tkazilgach, chekini guruhga ishonch uchun tashlashingiz mumkin.*"
-    else:
-        report_text = "📅 **Bugun guruhda 50 tadan ko'p faol odam qo'shgan g'oliblar topilmadi.**"
-        
-    await bot.send_message(chat_id=ADMIN_ID, text=report_text, parse_mode='Markdown')
+    await message.reply(f"👤 {message.from_user.get_mention(as_html=True)}\n"
+                        f"✅ Guruhda qolgan faol referallaringiz: **{invited}** ta\n"
+                        f"❌ Chiqib ketganlar: **{left}** ta\n"
+                        f"💰 Pul olish uchun bot lichkasiga o'tib hamyoningizni sozlang: @jomboy_elon_bot", parse_mode='HTML')
 
-# 8. RENDER PORT BINDING UCHUN SOXTA VEB SERVER
-async def handle_web(request):
-    return web.Response(text="Bot is running smoothly!")
-
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', handle_web)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-
-async def main():
-    await start_web_server()
-    
-    # Avtomat taymerni (Apscheduler) sozlash va har kuni 22:00 ga o'rnatish
-    scheduler = AsyncIOScheduler(timezone="Asia/Samarkand")
-    scheduler.add_job(send_daily_report, 'cron', hour=22, minute=0)
-    scheduler.start()
-    logging.info("Taymer muvaffaqiyatli yoqildi va soat 22:00 ga sozlandi.")
-    
-    try:
-        await dp.start_polling()
-    finally:
-        await dp.storage.close()
-        await dp.storage.wait_closed()
-
-if __name__ == '__main__':
-    asyncio.run(main())
+# 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
+@dp.message_handler(Text(equals="👑 Admin paneli"))
