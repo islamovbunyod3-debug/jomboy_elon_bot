@@ -104,11 +104,11 @@ async def choose_payment(message: types.Message):
 
 @dp.callback_query_handler(Text(startswith="pay_"))
 async def payment_callback(call: types.CallbackQuery):
-    action = call.data.split("_")[1]
-    if action == "card":
+    action = call.data.split("_")
+    if action[1] == "card":
         cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Masalan: 8600123412341234):")
-    elif action == "phone":
+    elif action[1] == "phone":
         cursor.execute("UPDATE users SET payment_type = 'Telefon (Paynet)' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga pul tushadigan telefon raqamingizni yuboring (Masalan: +998991234567):")
     conn.commit()
@@ -215,4 +215,3 @@ async def group_profile(message: types.Message):
 # 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
 @dp.message_handler(Text(equals="Admin paneli"))
 async def admin_panel(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
