@@ -7,8 +7,8 @@ from aiohttp import web
 import asyncio
 
 # 1. BOT SOZLAMALARI
-API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'  # Yangi token
-ADMIN_ID = 6985111317  # Sizning ID raqamingiz
+API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'  # Botingizning faol tokeni
+ADMIN_ID = 6985111317  # Sizning shaxsiy Telegram ID raqamingiz
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 conn.commit()
 
-# 3. HANDLERLAR (START VA PROFIL)
+# 3. HANDLERLAR (START VA PROFIL BUYRUQLARI)
 @dp.message_handler(commands=['start'])
 async def start_cmd(message: types.Message):
     await message.reply("👋 Assalomu alaykum! 'Jomboy Elonlari' guruhining rasmiy botiga xush kelibsiz.\n\n"
@@ -64,23 +64,34 @@ async def handle_screenshot(message: types.Message):
     await bot.send_photo(chat_id=ADMIN_ID, photo=message.photo[-1].file_id, caption=caption_text, parse_mode='Markdown')
     await message.reply("✅ Skrinshot va ma'lumotlaringiz adminga muvaffaqiyatli yuborildi!")
 
-@dp.message_handler(content_types=types.ContentTypes.NEW_CHAT_MEMBERS)
-async def new_member_handler(message: types.Message):
-    inviter = message.from_user
-    new_members = message.new_chat_members
-    if inviter.id not in [member.id for member in new_members]:
-        added_count = len(new_members)
-        cursor.execute("SELECT invited_count FROM users WHERE user_id = ?", (inviter.id,))
-        row = cursor.fetchone()
-        if row:
-            new_count = row[0] + added_count
-            cursor.execute("UPDATE users SET invited_count = ? WHERE user_id = ?", (new_count, inviter.id))
-        else:
-            cursor.execute("INSERT INTO users (user_id, username, full_name, invited_count) VALUES (?, ?, ?, ?)",
-                           (inviter.id, inviter.username, inviter.full_name, added_count))
-        conn.commit()
+# 4. GURUHGA ODAM QO'SHILGANDA HISOBLASH VA CHIQIB KETGAN/QO'SHILGAN XABARLARINI TOZALASH
+@dp.message_handler(content_types=[types.ContentTypes.NEW_CHAT_MEMBERS, types.ContentTypes.LEFT_CHAT_MEMBER])
+async def group_moderator(message: types.Message):
+    # Agar guruhga yangi a'zolar qo'shilgan bo'lsa
+    if message.content_type == types.ContentTypes.NEW_CHAT_MEMBERS:
+        inviter = message.from_user
+        new_members = message.new_chat_members
+        
+        # Odam qo'shgan foydalanuvchini hisoblaymiz (agar o'zi mustaqil kirmagan bo'lsa)
+        if inviter.id not in [member.id for member in new_members]:
+            added_count = len(new_members)
+            cursor.execute("SELECT invited_count FROM users WHERE user_id = ?", (inviter.id,))
+            row = cursor.fetchone()
+            if row:
+                new_count = row[0] + added_count
+                cursor.execute("UPDATE users SET invited_count = ? WHERE user_id = ?", (new_count, inviter.id))
+            else:
+                cursor.execute("INSERT INTO users (user_id, username, full_name, invited_count) VALUES (?, ?, ?, ?)",
+                               (inviter.id, inviter.username, inviter.full_name, added_count))
+            conn.commit()
+    
+    # "Guruhga qo'shildi" yoki "Guruhni tark etdi" degan tizimli xabarni guruhdan o'chirib tashlaymiz
+    try:
+        await message.delete()
+    except Exception as e:
+        logging.error(f"Xabarni o'chirishda xatolik: {e}")
 
-# 4. RENDER PORT BINDING UCHUN SOXTA VEB SERVER
+# 5. RENDER PORT BINDING UCHUN SOXTA VEB SERVER
 async def handle_web(request):
     return web.Response(text="Bot is running smoothly!")
 
@@ -89,17 +100,14 @@ async def start_web_server():
     app.router.add_get('/', handle_web)
     runner = web.AppRunner(app)
     await runner.setup()
-    # Render beradigan dinamik portni o'qib olamiz
     port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
 
 async def main():
-    # Veb server va bot pollingni bir vaqtda ishga tushiramiz
     await start_web_server()
     logging.info("Fake web server started for Render Port Binding.")
     
-    # Aiogram botni yurgizamiz
     dispatcher = dp
     try:
         await dispatcher.start_polling()
