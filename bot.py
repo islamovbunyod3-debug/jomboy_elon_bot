@@ -7,8 +7,8 @@ from aiogram.dispatcher.filters import Text
 from aiohttp import web
 import asyncio
 
-# 1. BOT SOZLAMALARI
-API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'  
+# 1. BOT SOZLAMALARI (XAVFSIZLIK TIZIMI O'RNATILDI)
+API_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 6985111317  
 
 logging.basicConfig(level=logging.INFO)
@@ -103,7 +103,7 @@ async def choose_payment(message: types.Message):
 
 @dp.callback_query_handler(Text(startswith="pay_"))
 async def payment_callback(call: types.CallbackQuery):
-    action = call.data.split("_")[1]
+    action = call.data.split("_")
     if action == "card":
         cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Faqat raqamlar bilan):")
@@ -124,7 +124,7 @@ async def save_wallet(message: types.Message):
 
     cursor.execute("SELECT payment_type FROM users WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
-    pay_type = row[0] if row else "Tanlanmagan"
+    pay_type = row if row else "Tanlanmagan"
     
     if pay_type == "Plastik karta":
         if text.isdigit() and len(text) == 16:
@@ -188,7 +188,7 @@ async def left_member_handler(message: types.Message):
     row = cursor.fetchone()
     
     if row:
-        inviter_id = row[0]
+        inviter_id = row
         cursor.execute("UPDATE users SET invited_count = invited_count - 1, left_count = left_count + 1 WHERE user_id = ? AND invited_count > 0", (inviter_id,))
         cursor.execute("DELETE FROM invites WHERE invited_id = ?", (left_user_id,))
         conn.commit()
@@ -203,8 +203,8 @@ async def group_profile(message: types.Message):
     user_id = message.from_user.id
     cursor.execute("SELECT invited_count, left_count FROM users WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
-    invited = row[0] if row else 0
-    left = row[1] if row else 0
+    invited = row if row else 0
+    left = row if row else 0
     
     await message.reply(f"👤 {message.from_user.get_mention(as_html=True)}\n"
                         f"✅ Guruhda qolgan faol referallaringiz: **{invited}** ta\n"
