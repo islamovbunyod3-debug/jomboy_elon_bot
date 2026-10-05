@@ -120,7 +120,6 @@ async def save_wallet(message: types.Message):
     user_id = message.from_user.id
     text = message.text.strip().replace(" ", "").replace("-", "")
     
-    # Agar menyu tugmalari bosilgan bo'lsa, ularni raqam deb o'ylamasligi uchun o'tkazib yuboramiz
     if message.text in ["📊 Mening profilim", "💳 To'lov turini sozlash", "📜 Aksiya qoidalari", "👑 Admin paneli"]:
         return
 
@@ -149,12 +148,12 @@ async def save_wallet(message: types.Message):
 # 7. AKSIYA QOIDALARI TUGMASI
 @dp.message_handler(Text(equals="📜 Aksiya qoidalari"))
 async def show_rules(message: types.Message):
-    rules = ("🔥 **'Jomboy Elonlari' guruhi aksiyasi qoidalari!**\n\n"
+    rules = ("🔥 **'Jomboy Elonlari' guruhini rivojlantirish aksiyasi!**\n\n"
              "1️⃣ Guruhimizga odam (kontakt) qo'shing.\n"
-             "2️⃣ Guruh ichida yoki ushbu botda **'Mening profilim'** tugmasini bosib balansingizni kuzatib boring.\n"
-             "3️⃣ Har **50 ta faol odam** uchun **10 000 so'm** pul beriladi.\n"
+             "2️⃣ Bot ichida **'Mening profilim'** tugmasini bosib hisobingizni kuzatib boring.\n"
+             "3️⃣ Guruhda qolgan har **50 ta faol odam** uchun **10 000 so'm** pul beriladi.\n"
              "4️⃣ Agar qo'shgan odamlaringiz guruhdan chiqib ketsa, balansingizdan avtomat kamayadi (aldovlar o'tmaydi).\n"
-             "5️⃣ Pullar har kuni kechqurun admin tomonidan kartangizga yoki telefon raqamingizga o'tkazib beriladi.")
+             "5️⃣ Pullar har kuni kechqurun admin tomonidan kartangizga yoki paynet orqali o'tkazib beriladi.")
     await message.reply(rules, parse_mode='Markdown')
 
 # 8. KOP ODAM QOSHGANLARNI HISOBLASH (GURUHDA)
@@ -213,3 +212,5 @@ async def group_profile(message: types.Message):
                         f"❌ Chiqib ketganlar: **{left}** ta\n"
                         f"💰 Pul olish uchun bot lichkasiga o'tib hamyoningizni sozlang: @jomboy_elon_bot", parse_mode='HTML')
 
+# 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
+@dp.message_handler(Text(equals="👑 Admin paneli"))
