@@ -7,8 +7,8 @@ from aiogram.dispatcher.filters import Text
 from aiohttp import web
 import asyncio
 
-# 1. BOT SOZLAMALARI (TOKEN RENDER SOZLAMALARIDAN AVTOMAT O'QILADI)
-API_TOKEN = os.environ.get("BOT_TOKEN")
+# 1. BOT SOZLAMALARI (TOKEN TO'G'RIDAN-TO'G'RI KOD ICHIGA YOZILDI)
+API_TOKEN = '8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY'
 ADMIN_ID = 6985111317  
 
 logging.basicConfig(level=logging.INFO)
