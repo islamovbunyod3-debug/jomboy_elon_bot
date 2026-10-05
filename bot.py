@@ -103,11 +103,11 @@ async def choose_payment(message: types.Message):
 
 @dp.callback_query_handler(Text(startswith="pay_"))
 async def payment_callback(call: types.CallbackQuery):
-    action = call.data.split("_")[1]
-    if action == "card":
+    action = call.data.split("_")
+    if action[1] == "card":
         cursor.execute("UPDATE users SET payment_type = 'Plastik karta' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga 16 xonali plastik karta raqamingizni yuboring (Faqat raqamlar bilan):")
-    elif action == "phone":
+    elif action[1] == "phone":
         cursor.execute("UPDATE users SET payment_type = 'Telefon (Paynet)' WHERE user_id = ?", (call.from_user.id,))
         await call.message.answer("Menga pul tushadigan telefon raqamingizni yuboring (Masalan: +998991234567):")
     conn.commit()
@@ -188,7 +188,7 @@ async def left_member_handler(message: types.Message):
     row = cursor.fetchone()
     
     if row:
-        inviter_id = row[0]
+        inviter_id = row
         cursor.execute("UPDATE users SET invited_count = invited_count - 1, left_count = left_count + 1 WHERE user_id = ? AND invited_count > 0", (inviter_id,))
         cursor.execute("DELETE FROM invites WHERE invited_id = ?", (left_user_id,))
         conn.commit()
@@ -211,9 +211,9 @@ async def group_profile(message: types.Message):
                         f"❌ Chiqib ketganlar: **{left}** ta\n"
                         f"💰 Pul olish uchun bot lichkasiga o'tib hamyoningizni sozlang: @jomboy_elon_bot", parse_mode='HTML')
 
-# 10. FAQQAT SIZ UCHUN: ADMIN PANELI TUGMASI (HISOBOT)
-@dp.message_handler(Text(equals="Admin paneli"))
-async def admin_panel(message: types.Message):
+# 10. FAQQAT SIZ UCHUN: ADMIN PANELI BUYRUG'I (HISOBOT)
+@dp.message_handler(commands=['admin_panel'])
+async def admin_panel_cmd(message: types.Message):
     if message.from_user.id != ADMIN_ID:
         return
         
