@@ -3,7 +3,6 @@ import sqlite3
 def init_db():
     conn = sqlite3.connect("bot_database.db")
     cursor = conn.cursor()
-    # 1. Kundalik kirdi-chiqdi jadvali
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -11,10 +10,10 @@ def init_db():
             full_name TEXT,
             invited_count INTEGER DEFAULT 0,
             payment_type TEXT DEFAULT NULL,
-            payment_details TEXT DEFAULT NULL
+            payment_details TEXT DEFAULT NULL,
+            has_pending_request INTEGER DEFAULT 0
         )
     """)
-    # 2. To'lov kutayotgan g'oliblar arxivi
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS payouts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,32 +42,50 @@ def add_invite(user_id: int, username: str, full_name: str):
 def get_user_stats(user_id: int):
     conn = sqlite3.connect("bot_database.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT invited_count, payment_type, payment_details FROM users WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT invited_count, payment_type, payment_details, has_pending_request FROM users WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
     conn.close()
-    return row if row else (0, None, None)
+    return row if row else (0, None, None, 0)
 
 def update_payment_details(user_id: int, p_type: str, details: str):
     conn = sqlite3.connect("bot_database.db")
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET payment_type = ?, payment_details = ? WHERE user_id = ?", (p_type, details, user_id))
+    # Foydalanuvchi pul yechishga ariza berganini belgilaymiz (has_pending_request = 1)
+    cursor.execute("UPDATE users SET payment_type = ?, payment_details = ?, has_pending_request = 1 WHERE user_id = ?", (p_type, details, user_id))
     conn.commit()
     conn.close()
 
 def transfer_to_payouts_and_clear():
+    """Faqatgina pul yechishga ariza berganlarning hisobini kamaytiramiz, boshqalarning ballariga tegmaymiz!"""
     conn = sqlite3.connect("bot_database.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT user_id, full_name, invited_count, payment_type, payment_details FROM users WHERE invited_count >= 50 AND payment_details IS NOT NULL")
+    
+    # Faqat ariza berganlarni olamiz
+    cursor.execute("SELECT user_id, full_name, invited_count, payment_type, payment_details FROM users WHERE has_pending_request = 1 AND payment_details IS NOT NULL")
     winners = cursor.fetchall()
     
     for user_id, full_name, count, p_type, p_details in winners:
-        amount = (count // 50) * 10000
+        # Har 50 ta odam uchun pul hisoblaymiz
+        payout_blocks = count // 50
+        amount = payout_blocks * 10000
+        used_invites = payout_blocks * 50
+        
+        # Payouts jadvaliga yozamiz
         cursor.execute("""
             INSERT INTO payouts (user_id, full_name, amount, payment_type, payment_details)
             VALUES (?, ?, ?, ?, ?)
         """, (user_id, full_name, amount, p_type, p_details))
         
-    cursor.execute("UPDATE users SET invited_count = 0, payment_type = NULL, payment_details = NULL")
+        # Foydalanuvchining umumiy balidan faqat yechib olingan odamlar sonini ayiramiz (Qoldiq bal saqlanib qoladi!)
+        cursor.execute("""
+            UPDATE users 
+            SET invited_count = invited_count - ?, 
+                payment_type = NULL, 
+                payment_details = NULL, 
+                has_pending_request = 0 
+            WHERE user_id = ?
+        """, (used_invites, user_id))
+        
     conn.commit()
     conn.close()
     return winners
