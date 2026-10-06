@@ -31,7 +31,7 @@ app.router.add_get('/', handle)
 async def start_web_server():
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 20000)
+    site = web.TCPSite(runner, '0.0.0.0', 10000)
     await site.start()
 
 def main_menu_keyboard(user_id: int):
