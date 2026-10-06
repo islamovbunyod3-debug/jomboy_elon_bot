@@ -47,7 +47,7 @@ async def cmd_start(message: types.Message):
     welcome = (
         "👋 **Xush kelibsiz!**\n\n"
         "📢 **Aksiya sharti:** Guruhimizga kamida **50 ta faol odam** qo'shing va **10 000 so'm** mukofot puliga ega bo'ling!\n\n"
-        "📊 **Eslatma:** Siz qo'shgan odamlar soni (ballaringiz) bazada **doimiy saqlanadi va hech qachon o'chib ketmaydi.** Odam sonini istalgancha yig'ib, 50 tadan oshganda pulingizni yechib olishingiz mumkin."
+        "Menyu yordamida o'z ballaringizni tekshirishingiz yoki pulni yechib olishga so'rov berishingiz mumkin."
     )
     await message.answer(welcome, reply_markup=main_menu_keyboard(message.from_user.id), parse_mode="Markdown")
 
@@ -56,12 +56,10 @@ async def cmd_start(message: types.Message):
 async def tracking_invites(message: types.Message):
     inviter = message.from_user
     
-    # Guruh ichida chiqadigan "Falonchi guruhga qo'shildi" degan tizimli xabarni darrov o'chiramiz
     try:
         await message.delete()
     except Exception: pass
 
-    # Odamlarni hisoblagichga qo'shamiz
     for member in message.new_chat_members:
         if member.is_bot or member.id == inviter.id:
             continue
@@ -70,7 +68,6 @@ async def tracking_invites(message: types.Message):
 # 2. GURUHDAN KIMDIR CHIQIB KETGANDA (TIZIM XABARINI SHARTTA O'CHIRADI)
 @dp.message(F.left_chat_member)
 async def delete_leave_notification(message: types.Message):
-    # Guruh ichida chiqadigan "Falonchi guruhni tark etdi" degan tizimli xabarni ham o'chiramiz
     try:
         await message.delete()
     except Exception: pass
@@ -168,7 +165,7 @@ async def approve_payout(callback: types.CallbackQuery):
 async def daily_cron_job():
     winners = transfer_to_payouts_and_clear()
     if winners:
-        report = f"🔔 **Soat 22:00 bo'ldi!**\n📈 Bugun jami **{len(winners)} ta** foydalanuvchi pul yechishga so'rov yuborgan. Ularning arizalari Admin Panelga joylandi."
+        report = f"🔔 **Soat <layout>followupButton(query="""Add this daily report to my calendar""", label="""22:00""", variant=FOLLOWUP_BUTTON_VARIANT_DATE_DROPDOWN)</layout> bo'ldi!**\n📈 Bugun jami **{len(winners)} ta** foydalanuvchi pul yechishga so'rov yuborgan. Ularning arizalari Admin Panelga joylandi."
         try:
             await bot.send_message(chat_id=ADMIN_ID, text=report)
         except Exception: pass
