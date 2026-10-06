@@ -46,7 +46,7 @@ def main_menu_keyboard(user_id: int):
 async def cmd_start(message: types.Message):
     welcome = (
         "👋 **Xush kelibsiz!**\n\n"
-        "📢 **Aksiya sharti:** Guruhimizga kamida **10 ta faol odam** qo'shing va **10 000 so'm** mukofot puliga ega bo'ling!\n\n"
+        "📢 **Aksiya sharti:** Guruhimizga kamida **25 ta faol odam** qo'shing va **15 000 so'm** mukofot puliga ega bo'ling!\n\n"
         "Menyu yordamida o'z ballaringizni tekshirishingiz yoki pulni yechib olishga so'rov berishingiz mumkin."
     )
     await message.answer(welcome, reply_markup=main_menu_keyboard(message.from_user.id), parse_mode="Markdown")
@@ -64,7 +64,7 @@ async def tracking_invites(message: types.Message):
             continue
         add_invite(user_id=inviter.id, username=inviter.username or "Foydalanuvchi", full_name=inviter.full_name)
 
-# 2. GURUHXABARLARINI O'CHIRISH
+# 2. XIZMAT KO'RSATISH XABARLARINI O'CHIRISH
 @dp.message(F.content_type.in_([types.ContentType.NEW_CHAT_MEMBERS, types.ContentType.LEFT_CHAT_MEMBER]))
 @dp.message(F.service)
 async def delete_all_service_messages(message: types.Message):
@@ -76,15 +76,15 @@ async def delete_all_service_messages(message: types.Message):
 @dp.message(F.text == "📊 Shaxsiy statistika")
 async def show_stats(message: types.Message):
     count, p_type, p_details, pending = get_user_stats(message.from_user.id)
-    # 10 taga 10 000 so'm hisob-kitobi
-    earned_money = (count // 10) * 10000
+    # 25 taga 15 000 so'm hisob-kitobi
+    earned_money = (count // 25) * 15000
     status_text = (
         f"👤 **Foydalanuvchi:** {message.from_user.full_name}\n"
         f"👥 **Siz qo'shgan umumiy odamlar:** {count} ta\n"
         f"💵 **Yechish mumkin bo'lgan mablag':** {earned_money:,} so'm\n\n"
     )
     if pending == 1:
-        status_text += f"⏳ **To'lov holati:** Arizangiz qabul qilingan. Pul 12 soat ichida hisobingizga tushadi. ({p_details})"
+        status_text += f"⏳ **To'lov holati:** Arizangiz qabul qilingan. Pul 12 soat ichida hisobingizga tushami. ({p_details})"
     else:
         status_text += f"💳 **Rekvizit:** {p_details if p_details else 'Kiritilmagan'}"
     await message.answer(status_text, parse_mode="Markdown")
@@ -95,8 +95,8 @@ async def withdraw_money(message: types.Message):
     if pending == 1:
         await message.answer("⚠️ **Siz allaqachon ariza bergansiz.**\nArizangiz ko'rib chiqilmoqda va pul 12 soat ichida hisobingizga o'tkazib beriladi.")
         return
-    if count < 10:
-        await message.answer(f"❌ **Mablag' yechish uchun odam yetarli emas.**\(\nSizda {count}\) ta odam bor. Kamida **10 ta** bo'lishi shart.")
+    if count < 25:
+        await message.answer(f"❌ **Mablag' yechish uchun odam yetarli emas.**\(\nSizda {count}\) ta odam bor. Kamida **25 ta** bo'lishi shart.")
         return
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Karta raqamiga", callback_data="pay_card")],
