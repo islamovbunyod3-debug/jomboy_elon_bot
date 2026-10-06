@@ -47,7 +47,7 @@ def get_user_stats(user_id: int):
     conn.close()
     if row:
         return row
-    return (0, None, None, 0) # Aniq 4 ta qiymat qaytarishini ta'minlaymiz!
+    return (0, None, None, 0)
 
 def update_payment_details(user_id: int, p_type: str, details: str):
     conn = sqlite3.connect("bot_database.db")
@@ -63,9 +63,10 @@ def transfer_to_payouts_and_clear():
     winners = cursor.fetchall()
     
     for user_id, full_name, count, p_type, p_details in winners:
-        payout_blocks = count // 50
+        # ENDI 10 TA ODAMGA 10 000 SO'M HISOBLANADI
+        payout_blocks = count // 10
         amount = payout_blocks * 10000
-        used_invites = payout_blocks * 50
+        used_invites = payout_blocks * 10
         
         cursor.execute("""
             INSERT INTO payouts (user_id, full_name, amount, payment_type, payment_details)
