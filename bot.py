@@ -165,7 +165,7 @@ async def approve_payout(callback: types.CallbackQuery):
 async def daily_cron_job():
     winners = transfer_to_payouts_and_clear()
     if winners:
-        report = f"🔔 **Soat <layout>followupButton(query="""Add this daily report to my calendar""", label="""22:00""", variant=FOLLOWUP_BUTTON_VARIANT_DATE_DROPDOWN)</layout> bo'ldi!**\n📈 Bugun jami **{len(winners)} ta** foydalanuvchi pul yechishga so'rov yuborgan. Ularning arizalari Admin Panelga joylandi."
+        report = f"🔔 **Soat 22:00 bo'ldi!**\n📈 Bugun jami **{len(winners)} ta** foydalanuvchi pul yechishga so'rov yuborgan. Ularning arizalari Admin Panelga joylandi."
         try:
             await bot.send_message(chat_id=ADMIN_ID, text=report)
         except Exception: pass
