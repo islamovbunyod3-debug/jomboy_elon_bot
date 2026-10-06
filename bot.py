@@ -51,11 +51,10 @@ async def cmd_start(message: types.Message):
     )
     await message.answer(welcome, reply_markup=main_menu_keyboard(message.from_user.id), parse_mode="Markdown")
 
-# 1. GURUHGA ODAM QO'SHILGANDA (HISOBLAYDI VA TIZIM XABARINI O'CHIRADI)
+# 1. GURUHGA KIMDIR ODAM QO'SHGANDA (BALL QO'SHADI VA XABARNI O'CHIRADI)
 @dp.message(F.new_chat_members)
 async def tracking_invites(message: types.Message):
     inviter = message.from_user
-    
     try:
         await message.delete()
     except Exception: pass
@@ -65,9 +64,10 @@ async def tracking_invites(message: types.Message):
             continue
         add_invite(user_id=inviter.id, username=inviter.username or "Foydalanuvchi", full_name=inviter.full_name)
 
-# 2. GURUHDAN KIMDIR CHIQIB KETGANDA (TIZIM XABARINI SHARTTA O'CHIRADI)
-@dp.message(F.left_chat_member)
-async def delete_leave_notification(message: types.Message):
+# 2. GURUHGA KIMDIR LINK ORQALI O'ZI KIRGANDA yoki CHIQIB KETGANDA (TIZIM XABARLARINI JAMIY O'CHIRADI)
+@dp.message(F.service)
+async def delete_all_service_messages(message: types.Message):
+    """Guruhdagi har qanday kirdi-chiqdi va xizmat ko'rsatish yozuvlarini shartta o'chiradi"""
     try:
         await message.delete()
     except Exception: pass
@@ -170,7 +170,6 @@ async def daily_cron_job():
             await bot.send_message(chat_id=ADMIN_ID, text=report)
         except Exception: pass
 
-# ----------------- ASOSIY ISHGA TUSHIRISH -----------------
 async def main():
     init_db()
     await start_web_server()
@@ -179,9 +178,7 @@ async def main():
     scheduler.add_job(daily_cron_job, 'cron', hour=22, minute=0, timezone="Asia/Tashkent")
     scheduler.start()
     
-    # Eski webhook ulanishini avtomat o'chirib, pollingni toza yoqish qatori:
     await bot.delete_webhook(drop_pending_updates=True)
-    
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
