@@ -47,7 +47,7 @@ async def cmd_start(message: types.Message):
     welcome = (
         "👋 **Xush kelibsiz!**\n\n"
         "📢 **Aksiya sharti:** Guruhimizga kamida **50 ta faol odam** qo'shing va **10 000 so'm** mukofot puliga ega bo'ling!\n\n"
-        "📊 **Eslatma:** Siz qo'shgan odamlar soni (ballaringiz) bazada **doimiy saqlanadi va hech qachon o'chib ketmaydi.** Odam sonini istalgancha yig'ib, 50 tadan oshganda pulingizni yechib olishingiz mumkin."
+        "📊 Qo'shgan odamlaringiz soni bazada doimiy saqlanadi va o'chib ketmaydi. Istalgan vaqtda yechib olishingiz mumkin."
     )
     await message.answer(welcome, reply_markup=main_menu_keyboard(message.from_user.id), parse_mode="Markdown")
 
@@ -56,12 +56,12 @@ async def cmd_start(message: types.Message):
 async def tracking_invites(message: types.Message):
     inviter = message.from_user
     
-    # Guruh ichida chiqadigan "Falonchi guruhga qo'shildi" degan tizimli xabarni darrov o'chiramiz
+    # Birinchi bo'lib Telegram yaratgan yashil "Falonchi guruhga qo'shildi" xabarini guruhdan o'chiramiz
     try:
         await message.delete()
     except Exception: pass
 
-    # Odamlarni hisoblagichga qo'shamiz
+    # Keyin odamlarni hisoblagichga qo'shamiz
     for member in message.new_chat_members:
         if member.is_bot or member.id == inviter.id:
             continue
@@ -70,7 +70,7 @@ async def tracking_invites(message: types.Message):
 # 2. GURUHDAN KIMDIR CHIQIB KETGANDA (TIZIM XABARINI SHARTTA O'CHIRADI)
 @dp.message(F.left_chat_member)
 async def delete_leave_notification(message: types.Message):
-    # Guruh ichida chiqadigan "Falonchi guruhni tark etdi" degan tizimli xabarni ham o'chiramiz
+    # Telegram yaratgan "Falonchi guruhni tark etdi" xabarini guruhdagilar ko'rmasligi uchun o'chiramiz
     try:
         await message.delete()
     except Exception: pass
@@ -121,7 +121,7 @@ async def pay_phone(callback: types.CallbackQuery, state: FSMContext):
 @dp.message(PaymentState.waiting_for_card)
 async def proc_card(message: types.Message, state: FSMContext):
     update_payment_details(message.from_user.id, "Karta", message.text)
-    await message.answer("✅ To'lov so'rovingiz qabul qilindi! Arizangiz bugun soat 22:00 da adminga ko'rib chiqish uchun yuboriladi.", reply_markup=main_menu_keyboard(message.from_user.id))
+    await message.answer("✅ To'lov so'rovingiz qabul kijindi! Arizangiz bugun soat 22:00 da adminga ko'rib chiqish uchun yuboriladi.", reply_markup=main_menu_keyboard(message.from_user.id))
     await state.clear()
 
 @dp.message(PaymentState.waiting_for_phone)
