@@ -95,7 +95,7 @@ async def withdraw_money(message: types.Message):
         await message.answer("⚠️ **Siz allaqachon ariza bergansiz.**\nArizangiz soat 22:00 da adminga yuboriladi va tez orada to'lab beriladi.")
         return
     if count < 50:
-        await message.answer(f"❌ **Mablag' yechish uchun odam yetarli emas.**\(\nSizda {count}\) ta odam bor. Kamida **50 ta** bo'lysis shart.")
+        await message.answer(f"❌ **Mablag' yechish uchun odam yetarli emas.**\(\nSizda {count}\) ta odam bor. Kamida **50 ta** bo'lishi shart.")
         return
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Karta raqamiga", callback_data="pay_card")],
@@ -179,7 +179,7 @@ async def main():
     scheduler.add_job(daily_cron_job, 'cron', hour=22, minute=0, timezone="Asia/Tashkent")
     scheduler.start()
     
-    # Eski webhook ulanishini majburlab uzib tashlash qatori:
+    # Eski webhook ulanishini avtomat o'chirib, pollingni toza yoqish qatori:
     await bot.delete_webhook(drop_pending_updates=True)
     
     await dp.start_polling(bot)
