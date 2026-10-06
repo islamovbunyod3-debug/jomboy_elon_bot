@@ -46,12 +46,12 @@ def main_menu_keyboard(user_id: int):
 async def cmd_start(message: types.Message):
     welcome = (
         "👋 **Xush kelibsiz!**\n\n"
-        "📢 **Aksiya sharti:** Guruhimizga kamida **50 ta faol odam** qo'shing va **10 000 so'm** mukofot puliga ega bo'ling!\n\n"
+        "📢 **Aksiya sharti:** Guruhimizga kamida **10 ta faol odam** qo'shing va **10 000 so'm** mukofot puliga ega bo'ling!\n\n"
         "Menyu yordamida o'z ballaringizni tekshirishingiz yoki pulni yechib olishga so'rov berishingiz mumkin."
     )
     await message.answer(welcome, reply_markup=main_menu_keyboard(message.from_user.id), parse_mode="Markdown")
 
-# 1. GURUHGA KIMDIR ODAM QO'SHGANDA (BALL QO'SHADI VA XABARNI O'CHIRADI)
+# 1. GURUHGA KIMDIR ODAM QO'SHGANDA
 @dp.message(F.new_chat_members)
 async def tracking_invites(message: types.Message):
     inviter = message.from_user
@@ -64,7 +64,7 @@ async def tracking_invites(message: types.Message):
             continue
         add_invite(user_id=inviter.id, username=inviter.username or "Foydalanuvchi", full_name=inviter.full_name)
 
-# 2. GURUHGA KIMDIR LINK ORQALI O'ZI KIRGANDA yoki CHIQIB KETGANDA (HAMMA TIZIM XABARLARINI O'CHIRADI)
+# 2. GURUHXABARLARINI O'CHIRISH
 @dp.message(F.content_type.in_([types.ContentType.NEW_CHAT_MEMBERS, types.ContentType.LEFT_CHAT_MEMBER]))
 @dp.message(F.service)
 async def delete_all_service_messages(message: types.Message):
@@ -76,14 +76,15 @@ async def delete_all_service_messages(message: types.Message):
 @dp.message(F.text == "📊 Shaxsiy statistika")
 async def show_stats(message: types.Message):
     count, p_type, p_details, pending = get_user_stats(message.from_user.id)
-    earned_money = (count // 50) * 10000
+    # 10 taga 10 000 so'm hisob-kitobi
+    earned_money = (count // 10) * 10000
     status_text = (
         f"👤 **Foydalanuvchi:** {message.from_user.full_name}\n"
         f"👥 **Siz qo'shgan umumiy odamlar:** {count} ta\n"
         f"💵 **Yechish mumkin bo'lgan mablag':** {earned_money:,} so'm\n\n"
     )
     if pending == 1:
-        status_text += f"⏳ **To'lov holati:** Rekvizit yuborilgan, admin tasdiqlashi kutilmoqda ({p_details})"
+        status_text += f"⏳ **To'lov holati:** Arizangiz qabul qilingan. Pul 12 soat ichida hisobingizga tushadi. ({p_details})"
     else:
         status_text += f"💳 **Rekvizit:** {p_details if p_details else 'Kiritilmagan'}"
     await message.answer(status_text, parse_mode="Markdown")
@@ -92,10 +93,10 @@ async def show_stats(message: types.Message):
 async def withdraw_money(message: types.Message):
     count, _, _, pending = get_user_stats(message.from_user.id)
     if pending == 1:
-        await message.answer("⚠️ **Siz allaqachon ariza bergansiz.**\nArizangiz soat 22:00 da adminga yuboriladi va tez orada to'lab beriladi.")
+        await message.answer("⚠️ **Siz allaqachon ariza bergansiz.**\nArizangiz ko'rib chiqilmoqda va pul 12 soat ichida hisobingizga o'tkazib beriladi.")
         return
-    if count < 50:
-        await message.answer(f"❌ **Mablag' yechish uchun odam yetarli emas.**\(\nSizda {count}\) ta odam bor. Kamida **50 ta** bo'lishi shart.")
+    if count < 10:
+        await message.answer(f"❌ **Mablag' yechish uchun odam yetarli emas.**\(\nSizda {count}\) ta odam bor. Kamida **10 ta** bo'lishi shart.")
         return
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💳 Karta raqamiga", callback_data="pay_card")],
@@ -118,13 +119,13 @@ async def pay_phone(callback: types.CallbackQuery, state: FSMContext):
 @dp.message(PaymentState.waiting_for_card)
 async def proc_card(message: types.Message, state: FSMContext):
     update_payment_details(message.from_user.id, "Karta", message.text)
-    await message.answer("✅ To'lov so'rovingiz qabul qilindi! Arizangiz bugun soat 22:00 da adminga ko'rib chiqish uchun yuboriladi.", reply_markup=main_menu_keyboard(message.from_user.id))
+    await message.answer("✅ To'lov so'rovingiz muvaffaqiyatli qabul qilindi! Arizangiz ko'rib chiqish uchun adminga yuborildi. Pul **12 soat ichida** hisobingizga tushadi.", reply_markup=main_menu_keyboard(message.from_user.id))
     await state.clear()
 
 @dp.message(PaymentState.waiting_for_phone)
 async def proc_phone(message: types.Message, state: FSMContext):
     update_payment_details(message.from_user.id, "Tel raqam", message.text)
-    await message.answer("✅ To'lov so'rovingiz qabul qilindi! Arizangiz bugun soat 22:00 da adminga ko'rib chiqish uchun yuboriladi.", reply_markup=main_menu_keyboard(message.from_user.id))
+    await message.answer("✅ To'lov so'rovingiz muvaffaqiyatli qabul qilindi! Arizangiz ko'rib chiqish uchun adminga yuborildi. Pul **12 soat ichida** hisobingizga tushadi.", reply_markup=main_menu_keyboard(message.from_user.id))
     await state.clear()
 
 # ----------------- ADMIN PANEL -----------------
@@ -165,7 +166,7 @@ async def approve_payout(callback: types.CallbackQuery):
 async def daily_cron_job():
     winners = transfer_to_payouts_and_clear()
     if winners:
-        report = f"🔔 **Soat 22:00 bo'ldi!**\n📈 Bugun jami **{len(winners)} ta** foydalanuvchi pul yechishga so'rov yuborgan. Ularning arizalari Admin Panelga joylandi."
+        report = f"🔔 **Yangi to'lov arizalari tushdi!**\n📈 Bugun jami **{len(winners)} ta** foydalanuvchi pul yechishga so'rov yuborgan. Ularning arizalari Admin Panelga muvaffaqiyatli joylandi."
         try:
             await bot.send_message(chat_id=ADMIN_ID, text=report)
         except Exception: pass
