@@ -11,7 +11,7 @@ from database import (init_db, add_invite, get_user_stats, update_payment_detail
                       transfer_to_payouts_and_clear, get_pending_payouts, complete_payout)
 
 # SOZLAMALAR (Sizning ma'lumotlaringiz to'liq joylandi)
-BOT_TOKEN = "8645108254:AAG2xvLWF8AaNS4m7-mMK9yDo4gnIKP8GDY"
+BOT_TOKEN = "8645108254:AAFqT2Iufjevzw22-MVQhBHEehBVZYvnXsg"
 ADMIN_ID = 6985111317
 GROUP_CHAT_ID = -1001826354782
 
