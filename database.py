@@ -63,10 +63,10 @@ def transfer_to_payouts_and_clear():
     winners = cursor.fetchall()
     
     for user_id, full_name, count, p_type, p_details in winners:
-        # ENDI 10 TA ODAMGA 10 000 SO'M HISOBLANADI
-        payout_blocks = count // 10
-        amount = payout_blocks * 10000
-        used_invites = payout_blocks * 10
+        # 25 TA ODAMGA 15 000 SO'M HISOBLASH LOGIKASI
+        payout_blocks = count // 25
+        amount = payout_blocks * 15000
+        used_invites = payout_blocks * 25
         
         cursor.execute("""
             INSERT INTO payouts (user_id, full_name, amount, payment_type, payment_details)
