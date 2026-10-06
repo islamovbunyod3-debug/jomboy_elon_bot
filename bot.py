@@ -64,10 +64,10 @@ async def tracking_invites(message: types.Message):
             continue
         add_invite(user_id=inviter.id, username=inviter.username or "Foydalanuvchi", full_name=inviter.full_name)
 
-# 2. GURUHGA KIMDIR LINK ORQALI O'ZI KIRGANDA yoki CHIQIB KETGANDA (TIZIM XABARLARINI JAMIY O'CHIRADI)
+# 2. GURUHGA KIMDIR LINK ORQALI O'ZI KIRGANDA yoki CHIQIB KETGANDA (HAMMA TIZIM XABARLARINI O'CHIRADI)
+@dp.message(F.content_type.in_([types.ContentType.NEW_CHAT_MEMBERS, types.ContentType.LEFT_CHAT_MEMBER]))
 @dp.message(F.service)
 async def delete_all_service_messages(message: types.Message):
-    """Guruhdagi har qanday kirdi-chiqdi va xizmat ko'rsatish yozuvlarini shartta o'chiradi"""
     try:
         await message.delete()
     except Exception: pass
@@ -170,6 +170,7 @@ async def daily_cron_job():
             await bot.send_message(chat_id=ADMIN_ID, text=report)
         except Exception: pass
 
+# ----------------- ASOSIY ISHGA TUSHIRISH -----------------
 async def main():
     init_db()
     await start_web_server()
