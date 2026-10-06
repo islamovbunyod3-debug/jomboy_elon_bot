@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from apscheduler.schedulers.asyncio import AsyncScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiohttp import web
 from database import (init_db, add_invite, get_user_stats, update_payment_details, 
                       transfer_to_payouts_and_clear, get_pending_payouts, complete_payout)
@@ -33,7 +33,6 @@ app.router.add_get('/', handle)
 async def start_web_server():
     runner = web.AppRunner(app)
     await runner.setup()
-    # Render tekin tarifi uchun 10000-portda veb-sayt yoqiladi
     site = web.TCPSite(runner, '0.0.0.0', 10000)
     await site.start()
     logging.info("Uyg'oq veb-server 10000-portda muvaffaqiyatli ishga tushdi!")
@@ -149,7 +148,7 @@ async def approve_payout(callback: types.CallbackQuery):
         try:
             await bot.send_message(
                 chat_id=user_id, 
-                text=f"✅ **Xushxabar!**\n\nGuruhga qo'shgan odamlaringiz uchun so'ralgan **{amount:,} so'm** mukofot puli admin tomonidan rekvizitingizga to'liq o'tkazib berildi! Rahmat!"
+                text=f"✅ **Xushxabar!**\n\nGuruhga qo'shgan odamlaringiz uchun so'ralgan **{amount:,} so'm** mukofot puli admin tomonidan rekvizitingizga to'liq o'tkavib berildi! Rahmat!"
             )
             await callback.message.edit_text(callback.message.text + "\n\n🟢 **[TO'LANDI: Foydalanuvchiga bildirishnoma ketdi]**")
         except Exception:
@@ -162,7 +161,7 @@ async def daily_cron_job():
     if winners:
         report += f"📈 Bugun jami **{len(winners)} ta** g'olib aniqlandi va Admin Panelga joylandi. Menyudan kirib to'lovlarni tasdiqlashingiz mumkin."
     else:
-        report += "🤷‍♂️ Bugun 50 tadan ko'p odam qo'shgan many yangi g'oliblar topilmadi."
+        report += "🤷‍♂️ Bugun 50 tadan ko'p odam qo'shgan yangi g'oliblar topilmadi."
     try:
         await bot.send_message(chat_id=ADMIN_ID, text=report)
     except Exception: pass
@@ -175,7 +174,7 @@ async def main():
     await start_web_server()
     
     # 2. Soat 22:00 dagi avtomat taymerni yoqamiz
-    scheduler = AsyncScheduler()
+    scheduler = AsyncIOScheduler()
     scheduler.add_job(daily_cron_job, 'cron', hour=22, minute=0, timezone="Asia/Tashkent")
     scheduler.start()
     
