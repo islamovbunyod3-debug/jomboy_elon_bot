@@ -10,7 +10,7 @@ from aiohttp import web
 from database import (init_db, add_invite, get_user_stats, update_payment_details, 
                       transfer_to_payouts_and_clear, get_pending_payouts, complete_payout)
 
-BOT_TOKEN = "8645108254:AAFqT2Iufjevzw22-MVQhBHEehBVZYvnXsg"
+BOT_TOKEN = 8645108254:AAFDHUhSkCMWWcvXm828-IAcSegBvFXsMY8
 ADMIN_ID = 6985111317
 GROUP_CHAT_ID = -1001826354782
 
